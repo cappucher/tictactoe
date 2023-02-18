@@ -15,12 +15,28 @@
     <div class = "top">
       <form action="">
         <label for="select">Mode: </label>
-        <select name="opponent" id="mode">
+        <select onchange = "displayController.AIsettings()" name="opponent" id="mode">
           <option value="human">Human</option>
           <option value="AI">AI</option>
         </select>
       </form>
       <div id = "turn">Player X's turn</div>
+    </div>
+    <div class = "AI-settings">
+      <form class = "difficulty" action="">
+        <label for="select">Difficulty: </label>
+        <select name="opponent" id="difficulty">
+          <option value="easy">Easy</option>
+          <option value="impossible">Impossible</option>
+        </select>
+      </form>
+      <form class = "icon" action="">
+        <label for="select">Player: </label>
+        <select onchange = "displayController.reset()" name="opponent" id="player">
+          <option value="X">X</option>
+          <option value="O">O</option>
+        </select>
+      </form>
     </div>
     
     <div class="grid">

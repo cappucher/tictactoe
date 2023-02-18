@@ -1,6 +1,6 @@
 const Gameboard = (() => {
 
-    const board = [null, null, null, null, null, null, null, null, null];
+    let board = [null, null, null, null, null, null, null, null, null];
 
     const turn = () => {
         players = ["X", "O"];
@@ -99,40 +99,167 @@ const displayController = (() => {
         }
     }
 
+    const changeWinner = () => {
+        if (Gameboard.terminal() && Gameboard.winner() != null){
+            document.querySelector("#reset").textContent = "↻ Play Again";
+            document.querySelector("#turn").textContent = `Player ${Gameboard.winner()} wins!`;
+        }
+        else if (Gameboard.terminal() && Gameboard.winner() == null){
+            document.querySelector("#reset").textContent = "↻ Play Again";
+            document.querySelector("#turn").textContent = `It's a tie.`
+        }
+        else{
+            console.log("turn: " + Gameboard.turn());
+            document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+        }
+    }
+
     const addEvents = () => {
+        const mode = document.querySelector("#mode");
+        const player = document.querySelector("#player");
+        const reset = document.querySelector("#reset");
+        if (mode.value == "AI"){
+            document.querySelector(".AI-settings").style.display = "inline-block";
+        }
+        else{
+            document.querySelector(".AI-settings").style.display = "none";
+        }
         const elements = document.querySelector(".grid").children;
+        if (mode.value == "AI" && player.value == "O"){
+            setTimeout(() => {
+                AI.randomTurn();
+            }, 250);
+        }
         for (let i = 0; i < 9; i++){
             elements.item(i).addEventListener("click", () => {
-                if (!Gameboard.terminal()){
-                    Gameboard.result(i);
+                if (!Gameboard.terminal() && player.value == "X"){
+                    let x = Gameboard.result(i);
                     displayBoard();
-                    
-                    if (Gameboard.terminal() && Gameboard.winner() != null){
-                        document.querySelector("#reset").textContent = "↻ Play Again";
-                        document.querySelector("#turn").textContent = `Player ${Gameboard.winner()} wins!`;
-                    }
-                    else if (Gameboard.terminal() && Gameboard.winner() == null){
-                        document.querySelector("#reset").textContent = "↻ Play Again";
-                        document.querySelector("#turn").textContent = `It's a tie.`
+                    if (mode.value == "AI" && !Gameboard.terminal()){
+                        for (let i = 0; i < 9; i++) {
+                            elements.item(i).style.pointerEvents = 'none';
+                        }
+                        document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+                        setTimeout(() => {
+                            AI.randomMove();
+                            for (let i = 0; i < 9; i++) {
+                                elements.item(i).style.pointerEvents = 'auto';
+                            }
+                            changeWinner();
+                        }, 500);
                     }
                     else{
-                        document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+                        changeWinner();
+                    }
+                }
+                else if (!Gameboard.terminal() && player.value == "O"){
+                    let x = Gameboard.result(i);
+                    displayBoard();
+                    if (mode.value == "AI" && !Gameboard.terminal() && x){
+                        const elements = document.querySelector(".grid").children;
+
+                        if (mode.value == "AI" && !Gameboard.terminal()){
+                            for (let i = 0; i < 9; i++) {
+                                elements.item(i).style.pointerEvents = 'none';
+                            }
+                            document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+    
+                            setTimeout(() => {
+                                AI.randomMove();
+                                for (let i = 0; i < 9; i++) {
+                                    elements.item(i).style.pointerEvents = 'auto';
+                                }
+                                changeWinner();
+                            }, 500);
+                        }
+                        else{
+                            changeWinner();
+                        } 
+                    }
+                    else{
+                        changeWinner();
                     }
                 }
             });
         }
-        document.querySelector("#reset").addEventListener("click", () => {
+        reset.addEventListener("click", () => {
             Gameboard.clear();
-            document.querySelector("#reset").textContent = "↻ Reset Game";
+            reset.textContent = "↻ Reset Game";
             displayBoard();
             document.querySelector("#turn").textContent = "Player X's turn";
+            if (mode.value == "AI" && player.value == "O"){
+                setTimeout(() => {
+                    AI.randomTurn();
+                }, 250);
+            }
         })
+    }
+
+    const AIsettings = () => {
+        document.querySelector("#turn").textContent = `Player X's turn`
+        if (document.querySelector("#mode").value == "AI"){
+            Gameboard.clear();
+            displayBoard();
+            document.querySelector(".AI-settings").style.display = "inline-block";
+            if (document.querySelector("#player").value == "O"){
+                AI.randomTurn();
+            }
+        }
+        else{
+            Gameboard.clear();
+            displayBoard();
+            document.querySelector(".AI-settings").style.display = "none";
+        }
+    }
+
+    const reset = () => {
+        Gameboard.clear(); 
+        displayBoard();
+        document.querySelector("#turn").textContent = "Player X's turn";
+        document.querySelector("#reset").textContent = "↻ Reset Game";
+        if (document.querySelector("#player").value == 'O'){
+            setTimeout(() => {
+                AI.randomTurn();
+            }, 250);
+        } 
     }
 
     return {
         displayBoard,
-        addEvents
+        addEvents,
+        AIsettings,
+        reset
     }
 })();
+
+const AI = (() => {
+    const randomMove = () => {
+        actions = Gameboard.actions();
+        move = Math.floor(Math.random() * actions.length);
+        Gameboard.result(actions[move]);
+        document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+        displayController.displayBoard();
+    }
+
+    const randomTurn = () => {
+        const elements = document.querySelector(".grid").children;
+
+        for (let i = 0; i < 9; i++) {
+            elements.item(i).style.pointerEvents = 'none';
+        }
+        setTimeout(() => {
+            AI.randomMove();
+            for (let i = 0; i < 9; i++) {
+                elements.item(i).style.pointerEvents = 'auto';
+            }
+        }, 250);
+        
+    }
+    return {
+        randomMove,
+        randomTurn
+    }
+})();
+
 
 displayController.addEvents();
