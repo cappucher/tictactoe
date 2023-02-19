@@ -1,26 +1,26 @@
+let board = [null, null, null, null, null, null, null, null, null];
+
 const Gameboard = (() => {
 
-    let board = [null, null, null, null, null, null, null, null, null];
-
-    const turn = () => {
+    const turn = (state = board) => {
         players = ["X", "O"];
         sum = 0;
         for (let i = 0; i < 9; i++){
-            if (board[i] != null){
+            if (state[i] != null){
                 sum++;
             }
         }
         return players[sum % 2];
     }
 
-    const winner = () => {
+    const winner = (state = board) => {
         combinations = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]]
         for (let i = 0; i < combinations.length; i++){
-            if (board[combinations[i][0]] == board[combinations[i][1]] && board[combinations[i][1]] == board[combinations[i][2]]){
-                if (board[combinations[i][0]] == "X"){
+            if (state[combinations[i][0]] == state[combinations[i][1]] && state[combinations[i][1]] == state[combinations[i][2]]){
+                if (state[combinations[i][0]] == "X"){
                     return "X";
                 }
-                else if (board[combinations[i][0]] == "O"){
+                else if (state[combinations[i][0]] == "O"){
                     return "O";
                 }
             }
@@ -28,42 +28,50 @@ const Gameboard = (() => {
         return null;
     }
 
-    const utility = () => {
-        if (winner() == "X"){
+    const utility = (state = board) => {
+        if (winner(state) == "X"){
             return 1;
         }
-        else if (winner() == "O"){
+        else if (winner(state) == "O"){
             return -1;
         }
         return 0;
     }
 
-    const actions = () => {
+    const actions = (state = board) => {
         actionArray = [];
         for (let i = 0; i < 9; i++){
-            if (board[i] == null){
+            if (state[i] == null){
                 actionArray.push(i);
             }
         }
         return actionArray;
     }
 
-    const result = (action) => {
-        if (board[action] != null){
+    const result = (action, state = board) =>{
+        if (state[action] != null){
             return false;
         }
-        board[action] = turn();
+        state[action] = turn();
         return true;
     }
+    const resultCopy = (action, state = board) => {
+        if (state[action] != null){
+            return board;
+        }
+        let boardCopy = state.slice();
+        boardCopy[action] = turn(state);
+         return boardCopy;
+    }
 
-    const terminal = () => {
+    const terminal = (state = board) => {
         sum = 0;
         for (let i = 0; i < 9; i++){
-            if (board[i] != null){
+            if (state[i] != null){
                 sum++;
             }
         }
-        if (winner() != null){
+        if (winner(state) != null){
             return true;
         }
         else if (sum == 9){
@@ -79,23 +87,24 @@ const Gameboard = (() => {
     }
 
     return {
-        board,
         turn,
         winner,
         utility,
         actions,
         result,
         terminal,
-        clear
+        clear,
+        resultCopy
     }
 
 })();
 
 const displayController = (() => {
+
     const displayBoard = () => {
         const elements = document.querySelector(".grid").children;
         for (let i = 0; i < 9; i++){
-            elements.item(i).textContent = Gameboard.board[i];
+            elements.item(i).textContent = board[i];
         }
     }
 
@@ -109,7 +118,6 @@ const displayController = (() => {
             document.querySelector("#turn").textContent = `It's a tie.`
         }
         else{
-            console.log("turn: " + Gameboard.turn());
             document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
         }
     }
@@ -126,22 +134,46 @@ const displayController = (() => {
         }
         const elements = document.querySelector(".grid").children;
         if (mode.value == "AI" && player.value == "O"){
+            for (let i = 0; i < 9; i++) {
+                elements.item(i).style.pointerEvents = 'none';
+            }
+            document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
             setTimeout(() => {
-                AI.randomTurn();
-            }, 250);
+                if (document.querySelector("#difficulty").value == "easy"){
+                    AI.randomMove();
+                }
+                else if (document.querySelector("#difficulty").value == "impossible"){
+                    AI.minimax();
+                }
+                else{
+                    AI.stopObvious();
+                }
+                for (let i = 0; i < 9; i++) {
+                    elements.item(i).style.pointerEvents = 'auto';
+                }
+                changeWinner();
+            }, 500);
         }
         for (let i = 0; i < 9; i++){
             elements.item(i).addEventListener("click", () => {
                 if (!Gameboard.terminal() && player.value == "X"){
                     let x = Gameboard.result(i);
                     displayBoard();
-                    if (mode.value == "AI" && !Gameboard.terminal()){
+                    if (mode.value == "AI" && !Gameboard.terminal() && x){
                         for (let i = 0; i < 9; i++) {
                             elements.item(i).style.pointerEvents = 'none';
                         }
                         document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
                         setTimeout(() => {
-                            AI.randomMove();
+                            if (document.querySelector("#difficulty").value == "easy"){
+                                AI.randomMove();
+                            }
+                            else if (document.querySelector("#difficulty").value == "impossible"){
+                                AI.minimax();
+                            }
+                            else{
+                                AI.stopObvious();
+                            }
                             for (let i = 0; i < 9; i++) {
                                 elements.item(i).style.pointerEvents = 'auto';
                             }
@@ -151,7 +183,7 @@ const displayController = (() => {
                     else{
                         changeWinner();
                     }
-                }
+                 }
                 else if (!Gameboard.terminal() && player.value == "O"){
                     let x = Gameboard.result(i);
                     displayBoard();
@@ -165,7 +197,15 @@ const displayController = (() => {
                             document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
     
                             setTimeout(() => {
-                                AI.randomMove();
+                                if (document.querySelector("#difficulty").value == "easy"){
+                                    AI.randomMove();
+                                }
+                                else if (document.querySelector("#difficulty").value == "impossible"){
+                                    AI.minimax();
+                                }
+                                else{
+                                    AI.stopObvious();
+                                }
                                 for (let i = 0; i < 9; i++) {
                                     elements.item(i).style.pointerEvents = 'auto';
                                 }
@@ -233,12 +273,133 @@ const displayController = (() => {
 })();
 
 const AI = (() => {
+
     const randomMove = () => {
-        actions = Gameboard.actions();
-        move = Math.floor(Math.random() * actions.length);
+        let actions = Gameboard.actions();
+        let move = Math.floor(Math.random() * actions.length);
         Gameboard.result(actions[move]);
         document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
         displayController.displayBoard();
+    }
+
+    const minimax = (state) => {
+        let computerTurn = document.querySelector("#player").value == "X" ? "O" : "X";
+        results = {}
+        if (computerTurn == "X"){
+            let big = -2;
+            let bestMove = 0;
+            for (let i = 0; i < Gameboard.actions(state).length; i++){
+                results[Gameboard.actions(state)[i]] = minValue(Gameboard.resultCopy(Gameboard.actions(state)[i], state));
+            }
+            for (let i = 0; i < Gameboard.actions(state).length; i++){
+                if (Gameboard.winner(Gameboard.resultCopy(Gameboard.actions(state)[i], state)) == "X"){
+                    Gameboard.result(Gameboard.actions(state)[i]);
+                    document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+                    displayController.displayBoard();
+                    return;
+                }
+                if (results[Gameboard.actions(state)[i]] > big){
+                    big = results[Gameboard.actions(state)[i]];
+                    bestMove = Gameboard.actions(state)[i];
+                }
+            }
+             Gameboard.result(bestMove);
+            document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+            displayController.displayBoard();
+        }
+        else{
+            let small = 2;
+            let bestMove = 0;
+            for (let i = 0; i < Gameboard.actions(state).length; i++){
+                results[Gameboard.actions(state)[i]] = maxValue(Gameboard.resultCopy(Gameboard.actions(state)[i], state));
+            }
+            for (let i = 0; i < Gameboard.actions(state).length; i++){
+                if (Gameboard.winner(Gameboard.resultCopy(Gameboard.actions(state)[i], state)) == "O"){
+                    Gameboard.result(Gameboard.actions(state)[i]);
+                    document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+                    displayController.displayBoard();
+                    return;
+                }
+                if (results[Gameboard.actions(state)[i]] < small){
+                    small = results[Gameboard.actions(state)[i]];
+                    bestMove = Gameboard.actions(state)[i];
+                }
+            }
+            Gameboard.result(bestMove);
+            document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+            displayController.displayBoard();
+        }
+    }
+
+    const maxValue = (state, depth = 9) => {
+        if (Gameboard.terminal(state) || depth == 0){
+            return Gameboard.utility(state);
+        }
+        let v = -2;
+        for (let i = 0; i < Gameboard.actions(state).length; i++){
+            v = Math.max(v, minValue(Gameboard.resultCopy(Gameboard.actions(state)[i], state), depth - 1));
+        }
+        return v;
+    }
+
+    const minValue = (state, depth = 9) => {
+        if (Gameboard.terminal(state) || depth == 0){
+            return Gameboard.utility(state);
+        }
+        let v = 2;
+        for (let i = 0; i < Gameboard.actions(state).length; i++){
+            v = Math.min(v, maxValue(Gameboard.resultCopy(Gameboard.actions(state)[i], state), depth - 1));
+        }
+        return v;
+    }
+    
+    const stopObvious = (state) => {
+        let computerTurn = document.querySelector("#player").value == "X" ? "O" : "X";
+        results = {}
+        if (computerTurn == "X"){
+            let big = -2;
+            let bestMove = 0;
+            for (let i = 0; i < Gameboard.actions(state).length; i++){
+                results[Gameboard.actions(state)[i]] = minValue(Gameboard.resultCopy(Gameboard.actions(state)[i], state), 2);
+            }
+            for (let i = 0; i < Gameboard.actions(state).length; i++){
+                if (Gameboard.winner(Gameboard.resultCopy(Gameboard.actions(state)[i], state)) == "X"){
+                    Gameboard.result(Gameboard.actions(state)[i]);
+                    document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+                    displayController.displayBoard();
+                    return;
+                }
+                if (results[Gameboard.actions(state)[i]] > big){
+                    big = results[Gameboard.actions(state)[i]];
+                    bestMove = Gameboard.actions(state)[i];
+                }
+            }
+             Gameboard.result(bestMove);
+            document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+            displayController.displayBoard();
+        }
+        else{
+            let small = 2;
+            let bestMove = 0;
+            for (let i = 0; i < Gameboard.actions(state).length; i++){
+                results[Gameboard.actions(state)[i]] = maxValue(Gameboard.resultCopy(Gameboard.actions(state)[i], state), 2);
+            }
+            for (let i = 0; i < Gameboard.actions(state).length; i++){
+                if (Gameboard.winner(Gameboard.resultCopy(Gameboard.actions(state)[i], state)) == "O"){
+                    Gameboard.result(Gameboard.actions(state)[i]);
+                    document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+                    displayController.displayBoard();
+                    return;
+                }
+                if (results[Gameboard.actions(state)[i]] < small){
+                    small = results[Gameboard.actions(state)[i]];
+                    bestMove = Gameboard.actions(state)[i];
+                }
+            }
+            Gameboard.result(bestMove);
+            document.querySelector("#turn").textContent = `Player ${Gameboard.turn()}'s turn`
+            displayController.displayBoard();
+        }
     }
 
     const randomTurn = () => {
@@ -248,7 +409,15 @@ const AI = (() => {
             elements.item(i).style.pointerEvents = 'none';
         }
         setTimeout(() => {
-            AI.randomMove();
+            if (document.querySelector("#difficulty").value == "easy"){
+                randomMove();
+            }
+            else if (document.querySelector("#difficulty").value == "impossible"){
+                minimax();
+            }
+            else{
+                stopObvious();
+            }
             for (let i = 0; i < 9; i++) {
                 elements.item(i).style.pointerEvents = 'auto';
             }
@@ -257,9 +426,13 @@ const AI = (() => {
     }
     return {
         randomMove,
-        randomTurn
+        randomTurn,
+        stopObvious,
+        minimax
     }
 })();
+
+
 
 
 displayController.addEvents();
